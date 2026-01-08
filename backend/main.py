@@ -168,8 +168,8 @@ def get_client_ip(request) -> str:
 @app.get("/")
 async def root():
     return {
-        "message": "GhostShell License Server",
-        "version": "1.0.0",
+        "message": "GhostShell License Server Pro",
+        "version": "2.0.0",
         "status": "active"
     }
 
