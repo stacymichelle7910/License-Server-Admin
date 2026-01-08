@@ -1,9 +1,10 @@
 services:
+  # Backend: FastAPI License Server
   - type: web
     name: ghostshell-license-server
     env: python
     plan: free
-    pythonVersion: 3.12  # ✅ Correct placement
+    pythonVersion: 3.12
     buildCommand: pip install -r backend/requirements.txt
     startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
     envVars:
@@ -18,10 +19,16 @@ services:
       - key: PORT
         value: 10000
 
+  # Frontend: Streamlit App
   - type: web
     name: black-pessah-admin
     env: python
     plan: free
-    pythonVersion: 3.12  # ✅ Also correct here
+    pythonVersion: 3.12
     buildCommand: pip install -r frontend/requirements-frontend.txt
     startCommand: streamlit run frontend/app.py --server.port $PORT --server.address 0.0.0.0
+    envVars:
+      - key: DATABASE_URL
+        value: postgresql://ghost_shell_db_user:6x0kEr92lIGtn0iduiyXKXtSxuGizH4h@dpg-d5g10o8gjchc73b1c4s0-a/ghost_shell_db
+      - key: PORT
+        value: 8501
