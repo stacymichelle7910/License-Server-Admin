@@ -1,7 +1,7 @@
 services:
   # Backend: FastAPI License Server
   - type: web
-    name: ghostshell-license-server
+    name: license-server
     env: python
     plan: free
     buildCommand: pip install -r backend/requirements.txt
@@ -11,7 +11,7 @@ services:
         value: 3.12
       - key: DATABASE_URL
         fromDatabase:
-          name: ghostshell-licenses-db
+          name: license-server-db
           property: connectionString
       - key: JWT_SECRET
         generateValue: true
@@ -34,6 +34,6 @@ services:
         value: 3.12
 
 databases:
-  - name: ghostshell-licenses-db
+  - name: license-server-db
     databaseName: ghostshell_licenses
     user: ghostshell_admin
