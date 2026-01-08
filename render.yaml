@@ -6,7 +6,7 @@ services:
     plan: free
     region: oregon
     rootDir: backend        # backend code lives here
-    pythonVersion: 3.11.9  # ensures pydantic-core builds without Rust
+    pythonVersion: 3.13     # must use 3.13 on Free tier
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
@@ -26,6 +26,6 @@ services:
     plan: free
     region: oregon
     rootDir: frontend      # frontend code lives here
-    pythonVersion: 3.11.9 # same Python version for consistency
+    pythonVersion: 3.13   # Free tier only supports 3.13
     buildCommand: pip install --upgrade pip && pip install -r requirements-frontend.txt
     startCommand: streamlit run app.py --server.port $PORT --server.address 0.0.0.0
