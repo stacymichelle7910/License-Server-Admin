@@ -10,9 +10,7 @@ services:
       - key: PYTHON_VERSION
         value: 3.12
       - key: DATABASE_URL
-        fromDatabase:
-          name: ghostshell-licenses-db
-          property: connectionString
+        value: postgresql://ghost_shell_db_user:6x0kEr92lIGtn0iduiyXKXtSxuGizH4h@dpg-d5g10o8gjchc73b1c4s0-a/ghost_shell_db
       - key: JWT_SECRET
         generateValue: true
       - key: ADMIN_TOKEN
@@ -33,7 +31,3 @@ services:
       - key: PYTHON_VERSION
         value: 3.12
 
-databases:
-  - name: ghostshell-licenses-db
-    databaseName: ghostshell_licenses
-    user: ghostshell_admin
