@@ -5,9 +5,9 @@ services:
     env: python
     plan: free
     region: oregon
-    rootDir: backend
-    pythonVersion: 3.11.9
-    buildCommand: pip install -r requirements.txt
+    rootDir: backend        # backend code lives here
+    pythonVersion: 3.11.9  # ensures pydantic-core builds without Rust
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: DATABASE_URL
@@ -25,7 +25,7 @@ services:
     env: python
     plan: free
     region: oregon
-    rootDir: frontend
-    pythonVersion: 3.11.9
-    buildCommand: pip install -r requirements-frontend.txt
+    rootDir: frontend      # frontend code lives here
+    pythonVersion: 3.11.9 # same Python version for consistency
+    buildCommand: pip install --upgrade pip && pip install -r requirements-frontend.txt
     startCommand: streamlit run app.py --server.port $PORT --server.address 0.0.0.0
