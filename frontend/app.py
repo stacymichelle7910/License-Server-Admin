@@ -68,7 +68,7 @@ def activate_license():
 def validate_license():
     st.header("Validate License (No Binding)")
     with st.form("validate_form"):
-        license_key = st.text_input("License Key", placeholder="GHOST-SHELL-UNIVERSAL-2024")
+        license_key = st.text_input("License Key", placeholder="GHOST-SHELL-UNIVERSAL-2026")
         submit = st.form_submit_button("Validate Only")
 
         if submit:
@@ -142,7 +142,7 @@ def create_license():
 
 def main():
     st.title("GhostShell License Manager")
-    st.caption("Test instantly with universal key → `GHOST-SHELL-UNIVERSAL-2024`")
+    st.caption("Test instantly with universal key → `GHOST-SHELL-UNIVERSAL-2026`")
 
     tab1, tab2, tab3 = st.tabs([
         "Activate (Bind Machine)",
@@ -159,7 +159,7 @@ def main():
 
     st.sidebar.success("""
     **Universal Key (Works Forever)**  
-    GHOST-SHELL-UNIVERSAL-2024  
+    GHOST-SHELL-UNIVERSAL-2026 
     Use it anywhere — no activation needed.
     """)
 
