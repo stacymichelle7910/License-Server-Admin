@@ -24,10 +24,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Configuration
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://ghostshell_licenses_db_user:DDWhHvsOG53980CKkbKUQLhVgdxDqgJW@dpg-d39f7a0dl3ps739u3bhg-a.oregon-postgres.render.com/ghostshell_licenses_db")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://ghostshell_admin:77PiEYoKh1uYEX2W4b7B0CzWxnbgXVzD@dpg-d5g3772li9vc73980h2g-a/ghostshell_licenses")
 JWT_SECRET = os.getenv("JWT_SECRET", "e19609515ba2c7c603c31fa6c58f4074e435e05b1220eae448623d9040f017cd8a9b2f3e7c1d4a5b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0")
-ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "admin_token_gh0st5h311_s3cur3_4cc355_k3y_2024_v1_x7z9q2w8e5r4t6y3u1i0p9o8")
-UNIVERSAL_LICENSE_KEY = os.getenv("UNIVERSAL_LICENSE_KEY", "GHOST-SHELL-UNIVERSAL-2024")
+ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "admin_token_gh0st5h311_s3cur3_4cc355_k3y_2026_v1_x7z9q2w8e5r4t6y3u1i0p9o8")
+UNIVERSAL_LICENSE_KEY = os.getenv("UNIVERSAL_LICENSE_KEY", "GHOST-SHELL-UNIVERSAL-2026")
 PORT = int(os.getenv("PORT", 8000))
 
 # Fail fast on missing critical configs
@@ -80,7 +80,7 @@ Base.metadata.create_all(bind=engine)
 
 # FastAPI app
 app = FastAPI(
-    title="GhostShell License Server",
+    title="GhostShell License Server Pro V1.0",
     description="Universal license validation server for GhostShell instances",
     version="1.0.0"
 )
