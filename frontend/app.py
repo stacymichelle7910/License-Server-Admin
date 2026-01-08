@@ -5,10 +5,10 @@ import uuid
 from datetime import datetime
 import os
 
-st.set_page_config(page_title="GhostShell License Manager", layout="wide")
+st.set_page_config(page_title="GhostShell Pro License Manager v1.0", layout="wide")
 
 # Update this if you deploy to a new Render instance
-API_URL = os.getenv("API_URL", "https://license-server-9flk.onrender.com")
+API_URL = os.getenv("API_URL", "https://license-server-58kf.onrender.com")
 
 def get_system_info():
     return {
