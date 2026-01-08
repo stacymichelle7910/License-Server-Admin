@@ -21,11 +21,11 @@ services:
 
   # Frontend: Streamlit Admin Panel
   - type: web
-    name: black-pessah-admin
+    name: server-admin
     env: python
     plan: free
     region: oregon
     rootDir: frontend      # frontend code lives here
-    pythonVersion: 3.13   # Free tier only supports 3.13
+    pythonVersion: 3.11.9  
     buildCommand: pip install --upgrade pip && pip install -r requirements-frontend.txt
     startCommand: streamlit run app.py --server.port $PORT --server.address 0.0.0.0
