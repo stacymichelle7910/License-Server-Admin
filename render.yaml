@@ -1,41 +1,38 @@
 services:
   # Backend: FastAPI License Server
   - type: web
-    name: ghostshell-license-server
+    name: license_server_db
     env: python
     plan: free
+    pythonVersion: 3.12        # <- forces build to use Python 3.12
     buildCommand: |
       pip install --upgrade pip
       pip install -r backend/requirements.txt
     startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.12
       - key: DATABASE_URL
         fromDatabase:
-          name: ghostshell-licenses-db
+          name: license_server_db
           property: connectionString
       - key: JWT_SECRET
         generateValue: true
       - key: ADMIN_TOKEN
         generateValue: true
       - key: UNIVERSAL_LICENSE_KEY
-        value: GHOST-SHELL-UNIVERSAL-2024
+        value: GHOST-SHELL-UNIVERSAL-2026
 
   # Frontend: Streamlit App
   - type: web
-    name: black-pessah-admin
+    name: server-admin
     env: python
     plan: free
+    pythonVersion: 3.12        # <- ensures frontend build uses 3.12 too
     buildCommand: |
       pip install --upgrade pip
       pip install -r frontend/requirements-frontend.txt
     startCommand: streamlit run frontend/app.py --server.port $PORT --server.address 0.0.0.0
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.12
 
 databases:
-  - name: ghostshell-licenses-db
-    databaseName: ghostshell_licenses
-    user: ghostshell_admin
+  - name: license_server_db
+    databaseName: license_server_db
+    user: server_admin
