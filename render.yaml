@@ -4,7 +4,9 @@ services:
     name: ghostshell-license-server
     env: python
     plan: free
-    buildCommand: pip install -r backend/requirements.txt
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r backend/requirements.txt
     startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
@@ -19,15 +21,15 @@ services:
         generateValue: true
       - key: UNIVERSAL_LICENSE_KEY
         value: GHOST-SHELL-UNIVERSAL-2024
-      - key: PORT
-        value: 10000  # Render overrides with $PORT
 
   # Frontend: Streamlit App
   - type: web
     name: black-pessah-admin
     env: python
     plan: free
-    buildCommand: pip install -r frontend/requirements-frontend.txt
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r frontend/requirements-frontend.txt
     startCommand: streamlit run frontend/app.py --server.port $PORT --server.address 0.0.0.0
     envVars:
       - key: PYTHON_VERSION
