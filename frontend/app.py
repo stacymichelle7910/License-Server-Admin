@@ -220,7 +220,7 @@ def stats():
                     st.error(f"Failed to fetch stats: {str(e)}")
 
 def main():
-    st.title("AlgoTrader License Manager")
+    st.title("Ghost Shell Pro License Manager v1.0")
     tabs = st.tabs(["Activate License", "Validate License", "Create License", "Manage License", "Statistics"])
     
     with tabs[0]:
