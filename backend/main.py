@@ -135,7 +135,7 @@ def get_db():
 # Utility functions
 def generate_license_key() -> str:
     """Generate a new license key"""
-    prefix = "GHOST"
+    prefix = "GHOST-SHELL-PRO"
     random_part = secrets.token_hex(8).upper()
     return f"{prefix}-{random_part[:4]}-{random_part[4:8]}-{random_part[8:12]}"
 
@@ -170,7 +170,7 @@ async def root():
     return {
         "message": "GhostShell License Server Pro",
         "version": "2.0.0",
-        "status": "active"
+        "status": "Your license server is active ✅"
     }
 
 @app.get("/health")
