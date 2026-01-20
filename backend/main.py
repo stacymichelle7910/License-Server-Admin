@@ -1,3 +1,4 @@
+
 """
 GhostShell License Server
 A universal license validation server for GhostShell instances
@@ -7,14 +8,14 @@ import os
 import hashlib
 import secrets
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, List
 import jwt
 from fastapi import FastAPI, HTTPException, Depends, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
-from sqlalchemy import create_engine, Column, String, DateTime, Boolean, Integer
+from sqlalchemy import create_engine, Column, String, DateTime, Boolean, Integer, func
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 import logging
@@ -124,6 +125,25 @@ class UpdateLicenseRequest(BaseModel):
 class DeleteLicenseRequest(BaseModel):
     license_key: str
 
+class LicenseDetailsResponse(BaseModel):
+    license_key: str
+    created_at: str
+    expires_at: Optional[str]
+    is_active: bool
+    last_validation: Optional[str]
+    validation_count: int
+    max_instances: int
+    used_instances: int
+    remaining_validations: Optional[int] = None
+    status: str
+
+class LicenseStatsResponse(BaseModel):
+    total_licenses: int
+    active_licenses: int
+    expired_licenses: int
+    recent_validations: int
+    universal_license_active: bool
+
 # Database dependency
 def get_db():
     db = SessionLocal()
@@ -164,13 +184,35 @@ def get_client_ip(request) -> str:
         return forwarded.split(",")[0].strip()
     return request.client.host if request.client else "unknown"
 
+def get_license_status(license_record) -> str:
+    """Get human-readable license status"""
+    if not license_record.is_active:
+        return "inactive"
+    elif license_record.expires_at and license_record.expires_at < datetime.utcnow():
+        return "expired"
+    return "active"
+
 # API Routes
 @app.get("/")
 async def root():
     return {
         "message": "GhostShell License Server Pro",
         "version": "2.0.0",
-        "status": "Your license server is active ✅"
+        "status": "Your license server is active ✅",
+        "endpoints": {
+            "license_management": [
+                "/validate - POST - Validate a license",
+                "/activate - POST - Activate a license on a machine",
+                "/create - POST - Create a new license (admin)",
+                "/update - PUT - Update a license (admin)",
+                "/delete - DELETE - Delete a license (admin)",
+                "/licenses - GET - View all licenses (admin)"
+            ],
+            "system": [
+                "/stats - GET - System statistics (admin)",
+                "/health - GET - Health check"
+            ]
+        }
     }
 
 @app.get("/health")
@@ -618,7 +660,57 @@ async def delete_license(
         logger.error(f"Error deleting license: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
-@app.get("/stats")
+@app.get("/licenses", response_model=List[LicenseDetailsResponse])
+async def get_all_licenses(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    """Get all licenses with details (admin only)"""
+    
+    if credentials.credentials != ADMIN_TOKEN:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    try:
+        # Get all licenses
+        licenses = db.query(License).all()
+        
+        license_details = []
+        
+        for license_record in licenses:
+            # Count active bindings for this license
+            active_bindings = db.query(LicenseBinding).filter(
+                LicenseBinding.license_key == license_record.license_key,
+                LicenseBinding.is_active == True
+            ).count()
+            
+            # Calculate remaining validations
+            remaining_validations = max(0, 10000 - license_record.validation_count)
+            
+            # Get status
+            status = get_license_status(license_record)
+            
+            license_details.append(LicenseDetailsResponse(
+                license_key=license_record.license_key,
+                created_at=license_record.created_at.isoformat(),
+                expires_at=license_record.expires_at.isoformat() if license_record.expires_at else None,
+                is_active=license_record.is_active,
+                last_validation=license_record.last_validation.isoformat() if license_record.last_validation else None,
+                validation_count=license_record.validation_count,
+                max_instances=license_record.max_instances,
+                used_instances=active_bindings,
+                remaining_validations=remaining_validations,
+                status=status
+            ))
+        
+        logger.info(f"Returned {len(license_details)} licenses")
+        
+        return license_details
+        
+    except Exception as e:
+        logger.error(f"Error getting licenses: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.get("/stats", response_model=LicenseStatsResponse)
 async def get_stats(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
@@ -639,13 +731,13 @@ async def get_stats(
             ValidationLog.timestamp > datetime.utcnow() - timedelta(days=7)
         ).count()
         
-        return {
-            "total_licenses": total_licenses,
-            "active_licenses": active_licenses,
-            "expired_licenses": expired_licenses,
-            "recent_validations": recent_validations,
-            "universal_license_active": True
-        }
+        return LicenseStatsResponse(
+            total_licenses=total_licenses,
+            active_licenses=active_licenses,
+            expired_licenses=expired_licenses,
+            recent_validations=recent_validations,
+            universal_license_active=True
+        )
         
     except Exception as e:
         logger.error(f"Error getting stats: {str(e)}")
