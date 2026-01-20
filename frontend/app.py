@@ -5,6 +5,7 @@ import platform
 import uuid
 from datetime import datetime
 import os
+import pandas as pd
 
 # ========================= PAGE CONFIG & CUSTOM CSS =========================
 st.set_page_config(
@@ -105,6 +106,25 @@ st.markdown("""
         padding: 1.5rem;
         font-size: 0.9rem;
     }
+    .license-table {
+        background-color: #21262d;
+        border-radius: 10px;
+        overflow: hidden;
+        margin-top: 1rem;
+    }
+    .dataframe {
+        color: #e0e0e0 !important;
+    }
+    .dataframe th {
+        background-color: #30363d !important;
+        color: #00ff9d !important;
+    }
+    .dataframe td {
+        background-color: #21262d !important;
+    }
+    .dataframe tr:hover {
+        background-color: #30363d !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -118,6 +138,161 @@ def get_system_info():
         "arch": platform.machine(),
         "ip": "unknown"
     }
+
+def view_license_keys(admin_token):
+    """View all existing license keys with details"""
+    with st.spinner("🔍 Fetching license keys..."):
+        try:
+            response = requests.get(f"{API_URL}/licenses", headers={"Authorization": f"Bearer {admin_token.strip()}"})
+            response.raise_for_status()
+            data = response.json()
+            
+            if isinstance(data, list) and len(data) > 0:
+                st.subheader(f"📋 All License Keys ({len(data)} total)")
+                
+                # Create DataFrame from license data
+                licenses_data = []
+                for license_item in data:
+                    # Determine status with emoji
+                    status = license_item.get('status', 'unknown')
+                    if status == 'active':
+                        status_display = "✅ Active"
+                    elif status == 'expired':
+                        status_display = "⚠️ Expired"
+                    elif status == 'inactive':
+                        status_display = "❌ Inactive"
+                    else:
+                        status_display = f"❓ {status}"
+                    
+                    license_data = {
+                        "License Key": license_item.get('license_key', 'N/A'),
+                        "Status": status_display,
+                        "Created": license_item.get('created_at', 'N/A'),
+                        "Expires": license_item.get('expires_at', 'N/A'),
+                        "Max Instances": license_item.get('max_instances', 'N/A'),
+                        "Used Instances": license_item.get('used_instances', 0),
+                        "Remaining Validations": license_item.get('remaining_validations', 'N/A'),
+                        "Validation Count": license_item.get('validation_count', 0)
+                    }
+                    
+                    # Format dates if available
+                    for date_field in ['Created', 'Expires']:
+                        if license_data[date_field] != 'N/A':
+                            try:
+                                dt = datetime.fromisoformat(license_data[date_field].replace('Z', '+00:00'))
+                                license_data[date_field] = dt.strftime('%Y-%m-%d')
+                            except:
+                                pass
+                    
+                    licenses_data.append(license_data)
+                
+                # Create DataFrame
+                df = pd.DataFrame(licenses_data)
+                
+                # Display in tabs
+                tab1, tab2, tab3 = st.tabs(["📊 Table View", "📈 Chart View", "🔍 Filter View"])
+                
+                with tab1:
+                    st.dataframe(df, use_container_width=True, height=400)
+                    
+                    # Export options
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        if st.button("📥 Export as CSV", key="export_csv"):
+                            csv = df.to_csv(index=False)
+                            st.download_button(
+                                label="Download CSV",
+                                data=csv,
+                                file_name="license_keys.csv",
+                                mime="text/csv",
+                                key="download_csv"
+                            )
+                    with col2:
+                        if st.button("📊 Export as JSON", key="export_json"):
+                            json_data = json.dumps(data, indent=2)
+                            st.download_button(
+                                label="Download JSON",
+                                data=json_data,
+                                file_name="license_keys.json",
+                                mime="application/json",
+                                key="download_json"
+                            )
+                
+                with tab2:
+                    if not df.empty:
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            # Status distribution
+                            active_count = len(df[df['Status'].str.contains('✅')])
+                            st.metric("Active Licenses", active_count,
+                                     f"{active_count/len(df)*100:.1f}%")
+                        
+                        with col2:
+                            expired_count = len(df[df['Status'].str.contains('⚠️')])
+                            st.metric("Expired Licenses", expired_count,
+                                     f"{expired_count/len(df)*100:.1f}%")
+                        
+                        with col3:
+                            inactive_count = len(df[df['Status'].str.contains('❌')])
+                            st.metric("Inactive Licenses", inactive_count,
+                                     f"{inactive_count/len(df)*100:.1f}%")
+                        
+                        # Expiration analysis
+                        try:
+                            now = datetime.now()
+                            expiring_soon = 0
+                            for expires in df['Expires']:
+                                if expires != 'N/A':
+                                    try:
+                                        exp_date = datetime.strptime(expires, '%Y-%m-%d')
+                                        if 0 < (exp_date - now).days <= 30:
+                                            expiring_soon += 1
+                                    except:
+                                        pass
+                            st.metric("Expiring in 30 days", expiring_soon)
+                        except:
+                            pass
+                
+                with tab3:
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        filter_status = st.selectbox("Filter by Status", 
+                                                    ["All", "Active", "Expired", "Inactive"],
+                                                    key="filter_status")
+                    with col2:
+                        search_key = st.text_input("Search License Key", 
+                                                  placeholder="Enter partial key...",
+                                                  key="search_key")
+                    
+                    filtered_df = df.copy()
+                    if filter_status != "All":
+                        if filter_status == "Active":
+                            filtered_df = filtered_df[filtered_df['Status'].str.contains('✅')]
+                        elif filter_status == "Expired":
+                            filtered_df = filtered_df[filtered_df['Status'].str.contains('⚠️')]
+                        elif filter_status == "Inactive":
+                            filtered_df = filtered_df[filtered_df['Status'].str.contains('❌')]
+                    
+                    if search_key:
+                        filtered_df = filtered_df[filtered_df['License Key'].str.contains(search_key, case=False, na=False)]
+                    
+                    st.dataframe(filtered_df, use_container_width=True, height=300)
+                    st.caption(f"Showing {len(filtered_df)} of {len(df)} licenses")
+                
+            else:
+                st.info("📭 No license keys found in the system")
+                
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:
+                st.warning("⚠️ The /licenses endpoint is not available on this server")
+                st.info("Please check if your license server supports viewing all licenses")
+                st.code(f"Status Code: {e.response.status_code}", language="text")
+            elif e.response.status_code == 401:
+                st.error("🔑 Unauthorized: Invalid admin token")
+            else:
+                st.error(f"❌ Failed to fetch license keys: {str(e)}")
+        except requests.RequestException as e:
+            st.error(f"🌐 Connection error: {str(e)}")
 
 # ========================= SECTIONS =========================
 def activate_license():
@@ -271,7 +446,7 @@ def manage_license():
 
         st.markdown("---")
 
-        # Delete Section - FIXED: No type="danger" on form_submit_button
+        # Delete Section
         st.subheader("🗑️ Delete License")
         with st.form(key='delete_form'):
             admin_token_delete = st.text_input("Admin Token (Delete)", type="password", placeholder="Required")
@@ -280,7 +455,6 @@ def manage_license():
             st.markdown("**⚠️ This action is permanent and cannot be undone.**")
             confirm = st.checkbox("I understand this will permanently delete the license")
 
-            # Use regular st.button with custom CSS for red color
             delete_clicked = st.form_submit_button("Delete Permanently")
 
             if delete_clicked:
@@ -300,9 +474,6 @@ def manage_license():
                         st.success(f"🗑️ **License Deleted Permanently**\n\n{data.get('message', 'Successfully removed')}")
                     except requests.RequestException as e:
                         st.error(f"❌ Deletion failed: {str(e)}")
-        
-        # Apply red styling via custom button kind (via CSS)
-        st.markdown('<button kind="delete">Delete Permanently</button>', unsafe_allow_html=True)
 
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -310,32 +481,63 @@ def stats():
     with st.container():
         st.markdown("<div class='section-card'>", unsafe_allow_html=True)
         st.header("📊 System Statistics")
-        with st.form(key='stats_form'):
-            st.markdown("### Admin-only: View license system overview")
-            admin_token = st.text_input("Admin Token", type="password", placeholder="Required for stats access")
-            submit = st.form_submit_button("Fetch Statistics")
-            if submit:
-                if not admin_token.strip():
-                    st.error("🔑 Admin token required!")
-                    return
-                with st.spinner("📈 Loading statistics..."):
-                    try:
-                        response = requests.get(f"{API_URL}/stats", headers={"Authorization": f"Bearer {admin_token.strip()}"})
-                        response.raise_for_status()
-                        data = response.json()
-                        st.success("📊 **License System Overview**")
-                        col1, col2, col3 = st.columns(3)
-                        with col1:
-                            st.metric("Total Licenses", data.get('total_licenses', 'N/A'))
-                            st.metric("Active Licenses", data.get('active_licenses', 'N/A'))
-                        with col2:
-                            st.metric("Expired Licenses", data.get('expired_licenses', 'N/A'))
-                            st.metric("Recent Validations (7d)", data.get('recent_validations', 'N/A'))
-                        with col3:
-                            universal = data.get('universal_license_active', False)
-                            st.metric("Universal License", "🟢 Active" if universal else "🔴 Inactive")
-                    except requests.RequestException as e:
-                        st.error(f"❌ Failed to load stats: {str(e)}")
+        
+        # Admin token input
+        admin_token = st.text_input("Admin Token", type="password", placeholder="Required for stats access", key="stats_token")
+        
+        if admin_token.strip():
+            # Create tabs for different views
+            tab1, tab2 = st.tabs(["📈 System Overview", "🔑 View License Keys"])
+            
+            with tab1:
+                st.subheader("System Statistics")
+                with st.form(key='stats_form'):
+                    submit_stats = st.form_submit_button("Fetch System Stats")
+                    if submit_stats:
+                        with st.spinner("📈 Loading statistics..."):
+                            try:
+                                response = requests.get(f"{API_URL}/stats", headers={"Authorization": f"Bearer {admin_token.strip()}"})
+                                response.raise_for_status()
+                                data = response.json()
+                                st.success("📊 **License System Overview**")
+                                col1, col2, col3 = st.columns(3)
+                                with col1:
+                                    st.metric("Total Licenses", data.get('total_licenses', 'N/A'))
+                                    st.metric("Active Licenses", data.get('active_licenses', 'N/A'))
+                                with col2:
+                                    st.metric("Expired Licenses", data.get('expired_licenses', 'N/A'))
+                                    st.metric("Recent Validations (7d)", data.get('recent_validations', 'N/A'))
+                                with col3:
+                                    universal = data.get('universal_license_active', False)
+                                    st.metric("Universal License", "🟢 Active" if universal else "🔴 Inactive")
+                                    
+                                # Additional stats if available
+                                if 'total_activations' in data:
+                                    st.metric("Total Activations", data['total_activations'])
+                                    
+                                # Display additional information
+                                if 'server_uptime' in data:
+                                    st.info(f"🕒 Server Uptime: {data['server_uptime']}")
+                                if 'last_backup' in data:
+                                    st.info(f"💾 Last Backup: {data['last_backup']}")
+                                    
+                            except requests.RequestException as e:
+                                st.error(f"❌ Failed to load stats: {str(e)}")
+            
+            with tab2:
+                st.subheader("View All License Keys")
+                st.markdown("View and manage all existing license keys in the system")
+                
+                if st.button("🔄 Refresh License List", key="refresh_licenses"):
+                    view_license_keys(admin_token)
+                else:
+                    # Initial load
+                    view_license_keys(admin_token)
+        
+        else:
+            st.warning("🔒 Please enter an admin token to access statistics")
+            st.info("The admin token is required to view system statistics and license keys")
+        
         st.markdown("</div>", unsafe_allow_html=True)
 
 # ========================= MAIN =========================
